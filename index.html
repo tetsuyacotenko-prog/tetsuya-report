@@ -55,6 +55,12 @@
   .reg p { color: var(--sub); margin: 0 0 16px; }
   .reg .btn { margin-top: 16px; }
   .toast { position: fixed; left: 16px; right: 16px; bottom: 96px; max-width: 528px; margin: 0 auto; background: #2b2f2e; color: #fff; padding: 14px 16px; border-radius: 12px; font-size: 16px; z-index: 10; }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: flex-end; z-index: 20; }
+  .sheet { width: 100%; max-width: 560px; margin: 0 auto; background: #fff; border-radius: 18px 18px 0 0; padding: 22px 16px calc(18px + env(safe-area-inset-bottom)); }
+  .sheet h2 { font-size: 19px; margin: 0 0 8px; }
+  .sheet p { margin: 0 0 16px; }
+  .sheet .btn + .btn { margin-top: 10px; }
+  .sheet .small { color: var(--sub); font-size: 14px; margin: 10px 0 0; text-align: center; }
   .err { background: #fff; border-radius: 14px; padding: 20px; margin-top: 48px; }
 </style>
 </head>
@@ -257,7 +263,10 @@ async function submit(ev) {
   if (S.sending) return;
   const err = validate();
   if (err) return toast(err);
+  send(false);
+}
 
+async function send(confirmed) {
   const btn = document.getElementById('send');
   S.sending = true;
   btn.disabled = true;
@@ -268,7 +277,12 @@ async function submit(ev) {
       const v = S.answers[it.id];
       answers[it.id] = typeof v === 'string' ? v.trim() : v;
     });
-    const r = await api('submit', { type: S.type, answers });
+    const r = await api('submit', { type: S.type, answers, confirmed });
+    if (r.needConfirm) {
+      btn.disabled = false;
+      btn.textContent = `${TYPE[S.type]}の報告を送信`;
+      return askMeter(r.warning);
+    }
     S.items[S.type].filter(visible).forEach(it => {
       if (it.keep !== false && !it.showIf && it.type !== 'check') save(it.id, answers[it.id]);
     });
@@ -282,6 +296,30 @@ async function submit(ev) {
   } finally {
     S.sending = false;
   }
+}
+
+// メーターの数字がおかしそうなとき、送る前に本人に確かめる
+function askMeter(warning) {
+  const box = document.createElement('div');
+  box.className = 'modal';
+  box.innerHTML = `
+    <div class="sheet">
+      <h2>メーターの数字を確認してください</h2>
+      <p>${esc(warning)}</p>
+      <button class="btn" id="fix">数字を直す</button>
+      <button class="btn ghost" id="force">合っているので、このまま送る</button>
+      <p class="small">このまま送ると、管理者に確認の連絡が行きます。</p>
+    </div>`;
+  document.body.appendChild(box);
+  box.querySelector('#fix').onclick = () => {
+    box.remove();
+    const el = document.querySelector('[data-id="meter"]');
+    if (el) { el.focus(); el.select(); }
+  };
+  box.querySelector('#force').onclick = () => {
+    box.remove();
+    send(true);
+  };
 }
 
 // トークに「送信しました」を送る → 公式LINEが返事をする（返信は無料）
