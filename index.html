@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>作業報告</title>
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  :root { --green: #06c755; --green-dark: #04a647; --red: #e5484d; --bg: #f4f6f5; --text: #1d2321; --sub: #66706c; --line: #dfe4e2; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.5 -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; -webkit-text-size-adjust: 100%; }
+  #app { max-width: 560px; margin: 0 auto; padding: 0 16px 120px; }
+  .center { text-align: center; padding: 80px 0; color: var(--sub); }
+  .top { padding: 20px 0 12px; }
+  .hello { font-size: 20px; font-weight: 700; }
+  .date { color: var(--sub); font-size: 15px; }
+  .tabs { display: flex; gap: 8px; margin: 8px 0 16px; }
+  .tab { flex: 1; padding: 12px 4px; border: 2px solid var(--line); border-radius: 12px; background: #fff; font: inherit; font-weight: 700; color: var(--sub); }
+  .tab.on { border-color: var(--green); color: var(--green-dark); background: #eafaf0; }
+  .tab small { display: block; font-weight: 400; font-size: 13px; }
+  .info { background: #fff8e1; border-radius: 10px; padding: 10px 12px; font-size: 15px; margin: 0 0 12px; }
+  .field { background: #fff; border-radius: 14px; padding: 14px; margin-bottom: 10px; }
+  .label { font-weight: 700; margin-bottom: 8px; }
+  .req { color: var(--red); font-size: 13px; margin-left: 4px; }
+  .choices { display: flex; gap: 8px; flex-wrap: wrap; }
+  .choice { flex: 1 1 0; min-width: 80px; min-height: 52px; border: 2px solid var(--line); border-radius: 12px; background: #fff; font: inherit; color: var(--text); }
+  .choice.on { border-color: var(--green); background: #eafaf0; font-weight: 700; }
+  .choice.on.bad { border-color: var(--red); background: #fdecec; color: #b42318; }
+  .input { display: flex; align-items: center; gap: 8px; }
+  input[type=text], input[type=number] { width: 100%; min-height: 52px; padding: 0 14px; border: 2px solid var(--line); border-radius: 12px; font: inherit; background: #fff; color: var(--text); }
+  input:focus { outline: none; border-color: var(--green); }
+  .unit { color: var(--sub); white-space: nowrap; }
+  .check { display: flex; align-items: center; gap: 12px; min-height: 40px; font-weight: 700; }
+  .check input { width: 28px; height: 28px; accent-color: var(--green); }
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: rgba(244,246,245,.95); }
+  .bar .btn { max-width: 528px; margin: 0 auto; display: block; }
+  .btn { width: 100%; min-height: 58px; border: 0; border-radius: 14px; background: var(--green); color: #fff; font: inherit; font-size: 19px; font-weight: 700; }
+  .btn:disabled { opacity: .6; }
+  .btn.ghost { background: #fff; color: var(--text); border: 2px solid var(--line); font-size: 17px; }
+  .link { display: block; margin: 18px auto 0; background: none; border: 0; color: var(--sub); font: inherit; text-decoration: underline; padding: 8px; }
+  .done { text-align: center; padding: 48px 0 0; }
+  .icon { width: 88px; height: 88px; border-radius: 50%; margin: 0 auto 16px; display: grid; place-items: center; font-size: 48px; font-weight: 700; color: #fff; background: var(--green); }
+  .warn .icon { background: var(--red); }
+  .done h1 { font-size: 24px; margin: 0 0 8px; }
+  .done p { color: var(--sub); margin: 0 0 16px; }
+  .issues { text-align: left; list-style: none; padding: 0; margin: 0 0 16px; }
+  .issues li { background: #fff; border-left: 5px solid var(--red); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; }
+  .issues li.note { border-left-color: #f5a623; }
+  .issues b { display: block; }
+  .issues span { color: var(--sub); font-size: 15px; }
+  .km { font-size: 18px; color: var(--text) !important; }
+  .reg h1 { font-size: 22px; margin: 40px 0 4px; }
+  .reg p { color: var(--sub); margin: 0 0 16px; }
+  .reg .btn { margin-top: 16px; }
+  .toast { position: fixed; left: 16px; right: 16px; bottom: 96px; max-width: 528px; margin: 0 auto; background: #2b2f2e; color: #fff; padding: 14px 16px; border-radius: 12px; font-size: 16px; z-index: 10; }
+  .err { background: #fff; border-radius: 14px; padding: 20px; margin-top: 48px; }
+</style>
+</head>
+<body>
+<div id="app"><div class="center">読み込み中…</div></div>
+<script>
+// ===== ここを書きかえる（導入手順書の手順5） =====
+const LIFF_ID = '2012114144-P7I0QteJ';
+const API_URL = 'https://script.google.com/macros/s/AKfycbyS5n8Qtulcv8BYw52uzEepDK13p624ffFgzPHI18pEu-D-HQYNvl3NnE9DP5KEqbR3LQ/exec';
+// ===============================================
+
+const TYPE = { start: '出発前', end: '帰り' };
+const TYPE_SUB = { start: '始業', end: '終業' };
+const MOCK = typeof window.MOCK_API === 'function';  // テスト用
+const $app = document.getElementById('app');
+const S = { idToken: '', name: '', displayName: '', today: {}, items: {}, type: 'start', answers: {}, sending: false };
+
+main();
+
+async function main() {
+  try {
+    if (!MOCK) {
+      await liff.init({ liffId: LIFF_ID });
+      if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; }
+      S.idToken = liff.getIDToken();
+    }
+    const r = await api('init');
+    Object.assign(S, { name: r.name, displayName: r.displayName, today: r.today, items: r.items });
+    if (!S.name) renderRegister(); else startForm();
+  } catch (e) {
+    renderError(e);
+  }
+}
+
+async function api(action, data) {
+  const payload = Object.assign({ action, idToken: S.idToken }, data || {});
+  if (MOCK) return window.MOCK_API(payload);
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload),
+  });
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error || '通信に失敗しました');
+  return json;
+}
+
+// ---------- 名前の登録（最初の1回だけ） ----------
+
+function renderRegister() {
+  $app.innerHTML = `
+    <div class="reg">
+      <h1>はじめに名前を登録</h1>
+      <p>最初の1回だけです。会社で呼ばれている名前を入れてください。</p>
+      <input type="text" id="name" maxlength="20" value="${esc(S.displayName)}" placeholder="例：山田 太郎">
+      <button class="btn" id="reg">登録する</button>
+    </div>`;
+  document.getElementById('reg').onclick = async (ev) => {
+    const name = document.getElementById('name').value.trim();
+    if (!name) return toast('名前を入れてください');
+    ev.target.disabled = true;
+    try {
+      const r = await api('register', { name });
+      Object.assign(S, { name: r.name, today: r.today });
+      startForm();
+    } catch (e) {
+      toast(e.message);
+      ev.target.disabled = false;
+    }
+  };
+}
+
+// ---------- 報告フォーム ----------
+
+function startForm(type) {
+  S.type = type || (S.today.start ? 'end' : 'start');
+  S.answers = {};
+  S.items[S.type].forEach(it => {
+    const saved = it.remember ? load(it.id) : null;
+    if (saved !== null) S.answers[it.id] = saved;
+    else if (it.default !== undefined) S.answers[it.id] = it.default;
+    else if (it.type === 'check') S.answers[it.id] = false;
+  });
+  renderForm();
+  window.scrollTo(0, 0);
+}
+
+function renderForm() {
+  const items = S.items[S.type].filter(visible);
+  const done = S.today[S.type];
+  const canOff = S.type === 'start' && !S.today.start && !S.today.off;
+  $app.innerHTML = `
+    <header class="top">
+      <div class="hello">${greeting()}、${esc(S.name)}さん</div>
+      <div class="date">${todayText()}</div>
+    </header>
+    <div class="tabs">
+      ${['start', 'end'].map(t => `
+        <button class="tab ${S.type === t ? 'on' : ''}" data-tab="${t}">
+          ${S.today[t] ? '✓ ' : ''}${TYPE[t]}<small>${TYPE_SUB[t]}</small>
+        </button>`).join('')}
+    </div>
+    ${S.today.off && S.type === 'start' ? '<p class="info">今日は「休み」で記録されています。出勤した場合はそのまま報告してください。</p>' : ''}
+    ${done ? `<p class="info">今日の${TYPE[S.type]}の報告は送信済みです。もう一度送ると、追加で記録されます。</p>` : ''}
+    <form id="f" novalidate>
+      ${items.map(field).join('')}
+      ${canOff ? '<button type="button" class="link" id="off">今日は休み</button>' : ''}
+      <div class="bar"><button class="btn" type="submit" id="send">${TYPE[S.type]}の報告を送信</button></div>
+    </form>`;
+
+  $app.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => startForm(b.dataset.tab));
+  $app.querySelectorAll('.choice').forEach(b => b.onclick = () => {
+    S.answers[b.dataset.id] = b.dataset.v;
+    const y = window.scrollY;
+    renderForm();
+    window.scrollTo(0, y);
+  });
+  $app.querySelectorAll('input[data-id]').forEach(el => {
+    el.oninput = el.onchange = () => { S.answers[el.dataset.id] = el.type === 'checkbox' ? el.checked : el.value; };
+  });
+  const off = document.getElementById('off');
+  if (off) off.onclick = markOff;
+  document.getElementById('f').onsubmit = submit;
+}
+
+function field(it) {
+  const v = S.answers[it.id];
+  const req = it.required ? '<span class="req">必須</span>' : '';
+  if (it.type === 'choice') {
+    return `<div class="field"><div class="label">${esc(it.label)}${req}</div><div class="choices">
+      ${it.options.map(o => {
+        const on = v === o;
+        const bad = on && it.bad && it.bad.includes(o);
+        return `<button type="button" class="choice ${on ? 'on' : ''} ${bad ? 'bad' : ''}" data-id="${it.id}" data-v="${esc(o)}">${esc(o)}</button>`;
+      }).join('')}
+    </div></div>`;
+  }
+  if (it.type === 'check') {
+    return `<div class="field"><label class="check"><input type="checkbox" data-id="${it.id}" ${v ? 'checked' : ''}>${esc(it.label)}</label></div>`;
+  }
+  const num = it.type === 'number';
+  return `<div class="field"><div class="label">${esc(it.label)}${req}</div><div class="input">
+    <input type="${num ? 'number' : 'text'}" data-id="${it.id}" value="${esc(v ?? '')}"
+      ${num ? `inputmode="decimal" step="${it.step || 'any'}"` : ''} placeholder="${esc(it.placeholder || '')}">
+    ${it.unit ? `<span class="unit">${esc(it.unit)}</span>` : ''}
+  </div></div>`;
+}
+
+function visible(it) {
+  return !it.showIf || S.answers[it.showIf.id] === it.showIf.value;
+}
+
+function validate() {
+  for (const it of S.items[S.type].filter(visible)) {
+    const v = S.answers[it.id];
+    const empty = v === undefined || v === null || String(v).trim() === '';
+    if (it.required && empty) return `「${it.label}」を入力してください`;
+    if (it.type === 'number' && !empty && isNaN(Number(v))) return `「${it.label}」は数字で入力してください`;
+  }
+  return '';
+}
+
+async function submit(ev) {
+  ev.preventDefault();
+  if (S.sending) return;
+  const err = validate();
+  if (err) return toast(err);
+
+  const btn = document.getElementById('send');
+  S.sending = true;
+  btn.disabled = true;
+  btn.textContent = '送信中…';
+  try {
+    const answers = {};
+    S.items[S.type].filter(visible).forEach(it => {
+      const v = S.answers[it.id];
+      answers[it.id] = typeof v === 'string' ? v.trim() : v;
+    });
+    const r = await api('submit', { type: S.type, answers });
+    S.items[S.type].forEach(it => { if (it.remember) save(it.id, S.answers[it.id]); });
+    S.today[S.type] = true;
+    await notifyChat(r);
+    renderDone(r);
+  } catch (e) {
+    toast(e.message);
+    btn.disabled = false;
+    btn.textContent = `${TYPE[S.type]}の報告を送信`;
+  } finally {
+    S.sending = false;
+  }
+}
+
+// トークに「送信しました」を送る → 公式LINEが返事をする（返信は無料）
+async function notifyChat(r) {
+  const hasIssue = r.problems.length > 0 || r.notices.length > 0;
+  if (!MOCK && liff.isInClient()) {
+    try {
+      await liff.sendMessages([{ type: 'text', text: `【${TYPE[S.type]}の報告】送信しました #${r.id}` }]);
+      return;
+    } catch (e) {
+      console.warn(e);
+    }
+  }
+  if (hasIssue) {
+    try { await api('followup', { id: r.id }); } catch (e) { console.warn(e); }
+  }
+}
+
+function renderDone(r) {
+  const ok = r.problems.length === 0;
+  const message = S.type === 'start' ? '今日も安全第一で、いってらっしゃい！' : 'おつかれさまでした！';
+  $app.innerHTML = `
+    <div class="done ${ok ? 'ok' : 'warn'}">
+      <div class="icon">${ok ? '✓' : '!'}</div>
+      <h1>${ok ? '送信しました' : '報告を受け付けました'}</h1>
+      <p>${ok ? message : '次の点を管理者に知らせました。'}</p>
+      ${r.problems.length || r.notices.length ? `<ul class="issues">
+        ${r.problems.map(p => `<li><b>${esc(p.text)}</b>${p.advice ? `<span>${esc(p.advice)}</span>` : ''}</li>`).join('')}
+        ${r.notices.map(n => `<li class="note"><b>お知らせ</b><span>${esc(n)}</span></li>`).join('')}
+      </ul>` : ''}
+      ${r.distance !== '' ? `<p class="km">今日の走行距離：<b>${esc(r.distance)}</b> km</p>` : ''}
+      <button class="btn" id="close">閉じる</button>
+    </div>`;
+  document.getElementById('close').onclick = closeOrBack;
+}
+
+async function markOff() {
+  if (!confirm('今日は「休み」として記録しますか？')) return;
+  try {
+    const r = await api('off');
+    S.today = r.today;
+    $app.innerHTML = `
+      <div class="done ok">
+        <div class="icon">✓</div>
+        <h1>休みで記録しました</h1>
+        <p>ゆっくり休んでください。</p>
+        <button class="btn" id="close">閉じる</button>
+      </div>`;
+    document.getElementById('close').onclick = closeOrBack;
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+function closeOrBack() {
+  if (!MOCK && liff.isInClient()) liff.closeWindow();
+  else startForm();
+}
+
+function renderError(e) {
+  $app.innerHTML = `
+    <div class="err">
+      <p><b>うまく開けませんでした</b></p>
+      <p>${esc(e.message || e)}</p>
+      <button class="btn ghost" id="retry">もう一度開く</button>
+    </div>`;
+  document.getElementById('retry').onclick = () => {
+    if (!MOCK && liff.isLoggedIn && liff.isLoggedIn()) liff.logout();
+    location.reload();
+  };
+}
+
+// ---------- 小さな道具 ----------
+
+function greeting() {
+  const h = new Date().getHours();
+  return h < 11 ? 'おはようございます' : h < 17 ? 'こんにちは' : 'おつかれさまです';
+}
+
+function todayText() {
+  const d = new Date();
+  return `${d.getMonth() + 1}月${d.getDate()}日（${'日月火水木金土'[d.getDay()]}）`;
+}
+
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function load(key) {
+  try { const v = localStorage.getItem('report_' + key); return v === null ? null : JSON.parse(v); } catch (e) { return null; }
+}
+
+function save(key, value) {
+  try { localStorage.setItem('report_' + key, JSON.stringify(value)); } catch (e) { /* 保存できなくても動く */ }
+}
+</script>
+</body>
+</html>
