@@ -19,6 +19,8 @@
   .tab.on { border-color: var(--green); color: var(--green-dark); background: #eafaf0; }
   .tab small { display: block; font-weight: 400; font-size: 13px; }
   .info { background: #fff8e1; border-radius: 10px; padding: 10px 12px; font-size: 15px; margin: 0 0 12px; }
+  .info.prev { background: #eafaf0; }
+  .hint { color: var(--sub); font-size: 14px; margin-top: 6px; }
   .field { background: #fff; border-radius: 14px; padding: 14px; margin-bottom: 10px; }
   .label { font-weight: 700; margin-bottom: 8px; }
   .req { color: var(--red); font-size: 13px; margin-left: 4px; }
@@ -80,7 +82,7 @@ async function main() {
       S.idToken = liff.getIDToken();
     }
     const r = await api('init');
-    Object.assign(S, { name: r.name, displayName: r.displayName, today: r.today, items: r.items });
+    Object.assign(S, { name: r.name, displayName: r.displayName, today: r.today, last: r.last || {}, items: r.items });
     if (!S.name) renderRegister(); else startForm();
   } catch (e) {
     renderError(e);
@@ -130,14 +132,41 @@ function renderRegister() {
 function startForm(type) {
   S.type = type || (S.today.start ? 'end' : 'start');
   S.answers = {};
+  S.usedPrev = false;
   S.items[S.type].forEach(it => {
-    const saved = it.remember ? load(it.id) : null;
-    if (saved !== null) S.answers[it.id] = saved;
-    else if (it.default !== undefined) S.answers[it.id] = it.default;
-    else if (it.type === 'check') S.answers[it.id] = false;
+    const v = initialValue(it);
+    if (v !== undefined) S.answers[it.id] = v;
   });
   renderForm();
   window.scrollTo(0, 0);
+}
+
+// 前回の答え（このスマホに残したもの → なければGoogle側の記録）
+function prevValue(it) {
+  const v = load(it.id);
+  if (v !== null && v !== '') return v;
+  const s = S.last && S.last[it.id];
+  return s === undefined || s === '' ? null : s;
+}
+
+// 引き継ぐのは「いつもと同じになりやすい答え」だけ。
+// 数字（毎日変わる）・チェック・詳しい内容・「要確認」になった答えは引き継がない
+function keepsPrev(it) {
+  return it.keep !== false && !it.showIf && it.type !== 'number' && it.type !== 'check';
+}
+
+function initialValue(it) {
+  if (keepsPrev(it)) {
+    const p = prevValue(it);
+    const ok = p !== null && !(it.bad && it.bad.includes(p)) && (!it.options || it.options.includes(p));
+    if (ok) {
+      if (p !== it.default) S.usedPrev = true;
+      return p;
+    }
+  }
+  if (it.default !== undefined) return it.default;
+  if (it.type === 'check') return false;
+  return undefined;
 }
 
 function renderForm() {
@@ -157,6 +186,7 @@ function renderForm() {
     </div>
     ${S.today.off && S.type === 'start' ? '<p class="info">今日は「休み」で記録されています。出勤した場合はそのまま報告してください。</p>' : ''}
     ${done ? `<p class="info">今日の${TYPE[S.type]}の報告は送信済みです。もう一度送ると、追加で記録されます。</p>` : ''}
+    ${S.usedPrev ? '<p class="info prev">前回の内容を入れてあります。今日と違うところだけ直して送信してください。</p>' : ''}
     <form id="f" novalidate>
       ${items.map(field).join('')}
       ${canOff ? '<button type="button" class="link" id="off">今日は休み</button>' : ''}
@@ -198,7 +228,14 @@ function field(it) {
     <input type="${num ? 'number' : 'text'}" data-id="${it.id}" value="${esc(v ?? '')}"
       ${num ? `inputmode="decimal" step="${it.step || 'any'}"` : ''} placeholder="${esc(it.placeholder || '')}">
     ${it.unit ? `<span class="unit">${esc(it.unit)}</span>` : ''}
-  </div></div>`;
+  </div>${hint(it)}</div>`;
+}
+
+// 毎日変わる数字（メーターなど）は、前回の数字を下に小さく出すだけにする
+function hint(it) {
+  if (it.type !== 'number' || it.default !== undefined) return '';
+  const p = prevValue(it);
+  return p === null ? '' : `<div class="hint">前回：${esc(p)}${it.unit ? ' ' + esc(it.unit) : ''}</div>`;
 }
 
 function visible(it) {
@@ -232,7 +269,9 @@ async function submit(ev) {
       answers[it.id] = typeof v === 'string' ? v.trim() : v;
     });
     const r = await api('submit', { type: S.type, answers });
-    S.items[S.type].forEach(it => { if (it.remember) save(it.id, S.answers[it.id]); });
+    S.items[S.type].filter(visible).forEach(it => {
+      if (it.keep !== false && !it.showIf && it.type !== 'check') save(it.id, answers[it.id]);
+    });
     S.today[S.type] = true;
     await notifyChat(r);
     renderDone(r);
